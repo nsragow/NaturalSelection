@@ -1,6 +1,7 @@
 /__pycache__
 /.ipynb_checkpoints
 /databases
+/database1
 *.sqlite
 *.ipynb
 .DS_Store

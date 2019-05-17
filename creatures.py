@@ -27,11 +27,14 @@ def next_id():
 class Space():
     def __init__(self):
         self.food = 0
+        self.meat = 0
         self.occupants = {}
     def add_blob(self,blob):
         self.occupants[blob.id] = blob
     def add_food(self,food):
         self.food += food
+    def add_meat(self,meat):
+        self.meat += meat
 
 #tweakable food spawn
 class Board():
@@ -67,23 +70,31 @@ class Board():
                 if self.map[x][y].food < 1:
                     self.map[x][y].food = self.food_func()
     def eat(self):
-        for x in range(self.x_len):
-            for y in range(self.y_len):
-                occupancy = len(self.map[x][y].occupants.keys())
+        checked_squares = set()
+        blobs_to_iterate = [x for x in self.blobs.values()]
+        for blob in blobs_to_iterate:
+            if blob.pos not in checked_squares:
+                pos = blob.pos
+                checked_squares.add(pos)
+                space = self.map[blob.pos[0]][blob.pos[1]]
+                occupancy = len(space.occupants.keys())
                 if occupancy > 0:
 
-                    occupants_sorted = list(sorted(self.map[x][y].occupants.values(),key=lambda blob : blob.mass,reverse=True))
+                    occupants_sorted = list(sorted(space.occupants.values(),key=lambda blob : blob.mass,reverse=True))
                     while eat_occurs(occupants_sorted,self.can_eat_func):
-                        occupants_sorted = simulate_eat(occupants_sorted,self.blobs,self.map[x][y].occupants)
-                    self.map[x][y].occupants = {}
+                        occupants_sorted = simulate_eat(occupants_sorted,self.blobs,space.occupants)
+                    space.occupants = {}
                     for blob in occupants_sorted:
-                        self.map[x][y].occupants[blob.id] = blob
+                        space.occupants[blob.id] = blob
                     #at this point all the blobicide is finished, now plant eating will take place
-                    food_count = self.map[x][y].food/len(self.map[x][y].occupants.keys())
-                    for blob in self.map[x][y].occupants.values():
-                        global food_grass
+                    food_count = space.food/len(space.occupants.keys())
+                    meat_count = space.meat/len(space.occupants.keys())
+                    for blob in space.occupants.values():
+                        global food_grass,food_meat
                         blob.eat(food_count,food_grass)
-                    self.map[x][y].food = 0
+                        blob.eat(meat_count,food_meat)
+                    space.food = 0
+                    space.meat = 0
     def move(self):
         for blob in self.blobs.values():
             current_space = self.map[blob.pos[0]][blob.pos[1]]
@@ -120,7 +131,10 @@ class Board():
         marked = []
         for blob in self.blobs.values():
             if blob.food < 0:
-                del self.map[blob.pos[0]][blob.pos[1]].occupants[blob.id]
+                space = self.map[blob.pos[0]][blob.pos[1]]
+                del space.occupants[blob.id]
+                space.add_meat(blob.food)
+
                 marked.append(blob.id)
         for mark in marked:
             del self.blobs[mark]
@@ -174,6 +188,7 @@ def simulate_eat(occupants_sorted,blob_dict,space_dict):
     eaten = occupants_sorted[-1]
     global food_meat
     eater.eat(eaten.food,food_meat)
+    eaten.food = 0
     del blob_dict[eaten.id]
     del space_dict[eaten.id]
 
@@ -225,8 +240,9 @@ def where_will_he_move(blob,map,can_eat_func):
                 return (pos[0],pos[1]-int(blob.speed))
 
 def food_count(blob,space,can_eat_func):
-    total_food = space.food/(len(space.occupants.keys())+1)
+    total_food = space.food/(len(space.occupants.keys())+1)*blob.food_efficiencies[food_grass]
+    total_food += space.meat/(len(space.occupants.keys())+1)*blob.food_efficiencies[food_meat]
     for other_blob in space.occupants.values():
         if can_eat_func(blob,other_blob):
-            total_food+=other_blob.food
+            total_food+=other_blob.food*blob.food_efficiencies[food_meat]
     return total_food

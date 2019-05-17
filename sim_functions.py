@@ -5,6 +5,7 @@ import SQLPanda as spd
 import random as r
 import numpy as np
 
+
 class SimSettings():
     def __init__(self,from_dict={}):
         self.settings = from_dict
@@ -152,7 +153,7 @@ class Simulator():
         costs = {
             c.speed : lambda x : x*s["speed_cost"],
             c.mass : lambda x : x*s["mass_cost"],
-            c.efficiency : lambda x : s["digestion_cost"]**x + (s["digestion_cost"]/1000)**(x*3)+x**s["digestion_cost"] + x**(s["digestion_cost"]*s["digestion_cost"]*s["digestion_cost"]),
+            c.efficiency : lambda x : x*s["digestion_cost"]+ x**(s["digestion_cost"]*s["digestion_cost"]),
             c.sight : lambda x : x*s["sight_cost"]
         }
         self.map_init(s)
@@ -275,6 +276,8 @@ def food_func(chance_food_spawn,food_spawn):
 
 def mutate_func(to_mutate):
     mutate_factor = np.random.random_sample()*2
+    if r.randint(0,100) > 95:
+        mutate_factor += 10
     return mutate_factor*to_mutate
 
 def can_eat_func(blob,target_blob):
