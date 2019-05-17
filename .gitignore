@@ -1,6 +1,6 @@
 /__pycache__
 /.ipynb_checkpoints
 /databases
-/blobs.sqlite
-/Untitled.ipynb
+*.sqlite
+*.ipynb
 .DS_Store

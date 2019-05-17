@@ -152,7 +152,7 @@ class Simulator():
         costs = {
             c.speed : lambda x : x*s["speed_cost"],
             c.mass : lambda x : x*s["mass_cost"],
-            c.efficiency : lambda x : s["digestion_cost"]**x,
+            c.efficiency : lambda x : s["digestion_cost"]**x + (s["digestion_cost"]/1000)**(x*3)+x**s["digestion_cost"] + x**(s["digestion_cost"]*s["digestion_cost"]*s["digestion_cost"]),
             c.sight : lambda x : x*s["sight_cost"]
         }
         self.map_init(s)
@@ -179,32 +179,35 @@ class Simulator():
                                         s["cycle_length"],
                                         s['cycle_count']))
         for i in range(s["cycle_count"]):
-            print(f"starting cycle {i}")
-            for j in range(s["cycle_length"]):
-                self.board.step()
-            print("fin steps")
-            pop_count = len(self.board.blobs.values())
-            print(f"population {pop_count}")
-            if pop_count == 0:
-                print("Simulation ending due to death of population")
+            try:
+                #print(f"starting cycle {i}")
+                for j in range(s["cycle_length"]):
+                    self.board.step()
+                #print("fin steps")
+                pop_count = len(self.board.blobs.values())
+                print(f"population {pop_count},    cycle {i}")
+                if pop_count == 0:
+                    print("Simulation ending due to death of population")
+                    break
+                for blob in self.board.blobs.values():
+                    self.df.q(f"""
+                    insert into blobs_alive(blob_id,
+                    sim_step,
+                    sim_id,
+                    meat_lifetime,
+                    grass_lifetime,
+                    reproduction_lifetime,
+                    grass_meals_lifetime,
+                    meat_meals_lifetime)
+                    values
+                    ({blob.id},{10+i*10},{sim_number},{blob.lifetimes["meat"]},{blob.lifetimes["grass"]},{blob.lifetimes["reproduction"]},{blob.lifetimes["grass_meals"]},{blob.lifetimes["meat_meals"]})
+                    """)
                 self.df.q("commit")
-                break
-            for blob in self.board.blobs.values():
-                self.df.q(f"""
-                insert into blobs_alive(blob_id,
-                sim_step,
-                sim_id,
-                meat_lifetime,
-                grass_lifetime,
-                reproduction_lifetime,
-                grass_meals_lifetime,
-                meat_meals_lifetime)
-                values
-                ({blob.id},{10+i*10},{sim_number},{blob.lifetimes["meat"]},{blob.lifetimes["grass"]},{blob.lifetimes["reproduction"]},{blob.lifetimes["grass_meals"]},{blob.lifetimes["meat_meals"]})
-                """)
-            self.df.q("commit")
-            if pop_count > 50000:
-                print("Simulation ending due to population explosion")
+                if pop_count > 50000:
+                    print("Simulation ending due to population explosion")
+                    break
+            except KeyboardInterrupt:
+                print('Interrupted, commiting all existing to table')
                 break
         for blob in self.board.blobs_existed:
             self.df.q(f"""

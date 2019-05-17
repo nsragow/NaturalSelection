@@ -74,7 +74,7 @@ class Board():
 
                     occupants_sorted = list(sorted(self.map[x][y].occupants.values(),key=lambda blob : blob.mass,reverse=True))
                     while eat_occurs(occupants_sorted,self.can_eat_func):
-                        occupants_sorted = simulate_eat(occupants_sorted,self.blobs)
+                        occupants_sorted = simulate_eat(occupants_sorted,self.blobs,self.map[x][y].occupants)
                     self.map[x][y].occupants = {}
                     for blob in occupants_sorted:
                         self.map[x][y].occupants[blob.id] = blob
@@ -169,12 +169,14 @@ def eat_occurs(occupants_sorted,can_eat_func):
         if can_eat_func(pair[0],pair[1]):
             return True
     return False
-def simulate_eat(occupants_sorted,blob_dict):
+def simulate_eat(occupants_sorted,blob_dict,space_dict):
     eater = occupants_sorted[0]
     eaten = occupants_sorted[-1]
     global food_meat
     eater.eat(eaten.food,food_meat)
     del blob_dict[eaten.id]
+    del space_dict[eaten.id]
+
     return occupants_sorted[:-1]
 def where_will_he_move(blob,map,can_eat_func):
 
